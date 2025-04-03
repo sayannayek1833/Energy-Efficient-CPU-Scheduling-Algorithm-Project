@@ -63,3 +63,88 @@ Displays a Gantt Chart to show process execution.
 Annotates the chart with process names and timelines.
 
 Displays total energy consumption post-simulation.
+
+
+
+Updated
+
+
+Energy-Efficient CPU Scheduling Simulator
+
+Overview
+
+This is a Python-based CPU Scheduling Simulator built using Tkinter for the graphical user interface and Matplotlib for visualizing scheduling algorithms through Gantt charts. The simulator supports three scheduling algorithms:
+
+First Come First Serve (FCFS)
+
+Shortest Job First (SJF)
+
+Round Robin (RR)
+
+Features
+
+Add processes with Arrival Time and Burst Time.
+
+Choose between different scheduling algorithms.
+
+If Round Robin is selected, enter a Time Quantum.
+
+Simulate CPU scheduling and visualize the Gantt Chart.
+
+Uses Tkinter for GUI and Matplotlib for graphical representation.
+
+Installation
+
+Clone the repository:
+
+git clone https://github.com/your-username/your-repo.git
+cd your-repo
+
+Install required dependencies:
+
+pip install matplotlib tkinter
+
+Run the application:
+
+python cpu_scheduler.py
+
+How to Use
+
+Select a scheduling algorithm from the dropdown menu.
+
+Enter Arrival Time and Burst Time for each process and click Add Process.
+
+If using Round Robin, specify a Time Quantum.
+
+Click Run Simulation to generate the Gantt Chart.
+
+File Structure
+
+📂 cpu-scheduler
+ ├── cpu_scheduler.py  # Main script for the simulator
+ ├── README.md          # Project documentation
+ ├── requirements.txt   # Dependencies list
+
+Dependencies
+
+Python 3.x
+
+Matplotlib (for plotting Gantt Charts)
+
+Tkinter (for GUI)
+
+Future Enhancements
+
+Add more scheduling algorithms like Priority Scheduling.
+
+Improve UI design.
+
+Display Turnaround Time and Waiting Time for each process.
+
+Contributing
+
+Feel free to fork this repository, make improvements, and submit a pull request!
+
+License
+
+This project is licensed under the MIT License.
