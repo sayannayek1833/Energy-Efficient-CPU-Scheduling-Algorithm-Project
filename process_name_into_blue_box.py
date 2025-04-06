@@ -231,126 +231,227 @@
 # root.mainloop()
 
 
-import matplotlib.pyplot as plt
 import tkinter as tk
 from tkinter import ttk, messagebox
+import matplotlib.pyplot as plt
+import numpy as np
+from collections import deque
 
-class CPUScheduler:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Energy-Efficient CPU Scheduling Simulator")
-        self.root.geometry("800x500")
-        self.root.configure(bg='#2C3E50')
-        
-        self.process_list = []
-        
-        self.algorithm_label = tk.Label(root, text="Select Scheduling Algorithm:", font=("Arial", 12, "bold"), bg='#2C3E50', fg='white')
-        self.algorithm_label.pack(pady=10)
-        
-        self.algorithm_var = tk.StringVar()
-        self.algorithm_dropdown = ttk.Combobox(root, textvariable=self.algorithm_var, values=["FCFS", "SJF", "Round Robin"], state="readonly")
-        self.algorithm_dropdown.pack()
-        self.algorithm_dropdown.bind("<<ComboboxSelected>>", self.toggle_quantum_entry)
-        
-        self.arrival_time_label = tk.Label(root, text="Arrival Time:", font=("Arial", 10), bg='#2C3E50', fg='white')
-        self.arrival_time_label.pack()
-        self.arrival_time_entry = tk.Entry(root)
-        self.arrival_time_entry.pack()
-        
-        self.burst_time_label = tk.Label(root, text="Burst Time:", font=("Arial", 10), bg='#2C3E50', fg='white')
-        self.burst_time_label.pack()
-        self.burst_time_entry = tk.Entry(root)
-        self.burst_time_entry.pack()
-        
-        self.quantum_label = tk.Label(root, text="Time Quantum:", font=("Arial", 10), bg='#2C3E50', fg='white')
-        self.quantum_entry = tk.Entry(root)
-        
-        self.add_button = tk.Button(root, text="Add Process", command=self.add_process, bg='#27AE60', fg='white', font=("Arial", 10, "bold"))
-        self.add_button.pack(pady=10)
-        
-        self.process_table = ttk.Treeview(root, columns=("PID", "Arrival Time", "Burst Time"), show="headings")
-        self.process_table.heading("PID", text="PID")
-        self.process_table.heading("Arrival Time", text="Arrival Time")
-        self.process_table.heading("Burst Time", text="Burst Time")
-        self.process_table.pack()
-        
-        self.run_button = tk.Button(root, text="Run Simulation", command=self.run_simulation, bg='#2980B9', fg='white', font=("Arial", 12, "bold"))
-        self.run_button.pack(pady=10)
-    
-    def toggle_quantum_entry(self, event):
-        if self.algorithm_var.get() == "Round Robin":
-            self.quantum_label.pack()
-            self.quantum_entry.pack()
+# Energy-Efficient FCFS Scheduling
+def energy_efficient_fcfs(processes):
+    processes.sort(key=lambda x: x['arrival'])
+    time = 0
+    total_energy = 0
+
+    for process in processes:
+        if time < process['arrival']:
+            time = process['arrival']
+
+        cpu_frequency = 1.5 if process['burst'] > 5 else 2.5
+        process['completion'] = time + process['burst']
+        process['turnaround'] = process['completion'] - process['arrival']
+        process['waiting'] = process['turnaround'] - process['burst']
+
+        power_consumption = cpu_frequency * 0.5
+        energy_used = power_consumption * process['burst']
+        total_energy += energy_used
+
+        time = process['completion']
+
+    print(f"\nTotal Energy Consumed: {total_energy:.2f} Joules")
+    return processes
+
+# Energy-Efficient Round Robin Scheduling
+def energy_efficient_round_robin(processes, quantum):
+    queue = deque()
+    time = 0
+    total_energy = 0
+
+    for process in processes:
+        process['remaining'] = process['burst']
+        process['completion'] = 0
+
+    processes.sort(key=lambda x: x['arrival'])
+    queue.append(processes[0])
+    index = 1
+
+    while queue:
+        current = queue.popleft()
+
+        if time < current['arrival']:
+            time = current['arrival']
+
+        cpu_frequency = 1.8 if current['remaining'] > quantum else 2.2
+        execution_time = min(current['remaining'], quantum)
+        time += execution_time
+        current['remaining'] -= execution_time
+
+        power_consumption = cpu_frequency * 0.4
+        energy_used = power_consumption * execution_time
+        total_energy += energy_used
+
+        if current['remaining'] == 0:
+            current['completion'] = time
+            current['turnaround'] = current['completion'] - current['arrival']
+            current['waiting'] = current['turnaround'] - current['burst']
         else:
-            self.quantum_label.pack_forget()
-            self.quantum_entry.pack_forget()
+            queue.append(current)
 
-    def add_process(self):
+        while index < len(processes) and processes[index]['arrival'] <= time:
+            queue.append(processes[index])
+            index += 1
+
+    print(f"\nTotal Energy Consumed: {total_energy:.2f} Joules")
+    return processes
+
+# Energy-Efficient SJF Scheduling
+def energy_efficient_sjf(processes):
+    processes.sort(key=lambda x: (x['arrival'], x['burst']))
+    time = 0
+    total_energy = 0
+    completed = []
+
+    while processes:
+        available = [p for p in processes if p['arrival'] <= time]
+        if not available:
+            time = processes[0]['arrival']
+            continue
+
+        current = min(available, key=lambda x: x['burst'])
+        processes.remove(current)
+
+        cpu_frequency = 1.5 if current['burst'] > 5 else 2.5
+        current['completion'] = time + current['burst']
+        current['turnaround'] = current['completion'] - current['arrival']
+        current['waiting'] = current['turnaround'] - current['burst']
+
+        power_consumption = cpu_frequency * 0.5
+        energy_used = power_consumption * current['burst']
+        total_energy += energy_used
+
+        time = current['completion']
+        completed.append(current)
+
+    print(f"\nTotal Energy Consumed: {total_energy:.2f} Joules")
+    return completed
+
+# Gantt Chart + Energy Analysis
+def show_results(results):
+    fig, ax = plt.subplots(figsize=(10, 5))
+    y_labels = []
+    total_energy = 0
+    colors = plt.cm.Paired(np.linspace(0, 1, len(results)))
+
+    for i, process in enumerate(results):
+        process_id = f"P{process['id']}"
+        burst_time = process['burst']
+        start_time = process['completion'] - burst_time
+
+        energy_used = (2.5 if process['burst'] < 5 else 1.5) * process['burst'] * 0.5
+        total_energy += energy_used
+        y_labels.append(process_id)
+
+        ax.broken_barh([(start_time, burst_time)], (i * 10, 9), facecolors=[colors[i]])
+        ax.text(start_time + burst_time / 2, i * 10 + 4.5, process_id, ha='center', va='center',
+                color='white', fontsize=11, fontweight='bold')
+
+    ax.set_yticks([i * 10 + 5 for i in range(len(y_labels))])
+    ax.set_yticklabels(y_labels)
+    ax.set_xlabel("Time", fontsize=12)
+    ax.set_ylabel("Processes", fontsize=12)
+    ax.set_title(f"{algo_var.get()} Gantt Chart (Total Energy: {total_energy:.2f}J)", fontsize=14, color="#1976D2")
+    ax.grid(axis='x', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.show()
+
+# Run Simulation Based on Algorithm
+def run_scheduling():
+    global process_list
+    algo = algo_var.get()
+
+    if not process_list:
+        messagebox.showerror("Error", "No processes added!")
+        return
+
+    if algo == "FCFS":
+        results = energy_efficient_fcfs(process_list)
+    elif algo == "SJF":
+        results = energy_efficient_sjf(process_list)
+    elif algo == "Round Robin":
         try:
-            pid = len(self.process_list) + 1
-            arrival_time = int(self.arrival_time_entry.get())
-            burst_time = int(self.burst_time_entry.get())
-            self.process_list.append((pid, arrival_time, burst_time))
-            self.process_table.insert("", "end", values=(pid, arrival_time, burst_time))
+            quantum = int(quantum_entry.get())
+            results = energy_efficient_round_robin(process_list, quantum)
         except ValueError:
-            messagebox.showerror("Error", "Invalid input! Enter numerical values.")
-
-    def run_simulation(self):
-        if not self.process_list:
-            messagebox.showerror("Error", "No processes added!")
+            messagebox.showerror("Error", "Enter a valid time quantum.")
             return
-        
-        algorithm = self.algorithm_var.get()
-        if algorithm == "FCFS":
-            self.fcfs()
-        elif algorithm == "SJF":
-            self.sjf()
-        elif algorithm == "Round Robin":
-            try:
-                quantum = int(self.quantum_entry.get())
-                self.round_robin(quantum)
-            except ValueError:
-                messagebox.showerror("Error", "Invalid time quantum!")
-        else:
-            messagebox.showerror("Error", "Select a valid algorithm")
-    
-    def fcfs(self):
-        self.process_list.sort(key=lambda x: x[1])  # Sort by arrival time
-        self.plot_gantt_chart(self.process_list, "FCFS")
+    else:
+        messagebox.showerror("Error", "Select a valid algorithm")
+        return
 
-    def sjf(self):
-        self.process_list.sort(key=lambda x: x[2])  # Sort by burst time
-        self.plot_gantt_chart(self.process_list, "SJF")
-    
-    def round_robin(self, quantum):
-        queue = self.process_list[:]
-        time = 0
-        execution_order = []
-        while queue:
-            pid, arrival, burst = queue.pop(0)
-            if burst > quantum:
-                execution_order.append((pid, time, time + quantum))
-                queue.append((pid, arrival, burst - quantum))
-                time += quantum
-            else:
-                execution_order.append((pid, time, time + burst))
-                time += burst
-        self.plot_gantt_chart(execution_order, "Round Robin")
+    show_results(results)
 
-    def plot_gantt_chart(self, schedule, algorithm):
-        fig, ax = plt.subplots(figsize=(8, 3))
-        y_labels = []
-        for idx, (pid, start, end) in enumerate(schedule):
-            ax.barh(y=idx, width=end-start, left=start, height=0.5, label=f"P{pid}")
-            y_labels.append(f"P{pid}")
-        ax.set_xlabel("Time")
-        ax.set_title(f"Gantt Chart ({algorithm})")
-        ax.set_yticks(range(len(y_labels)))
-        ax.set_yticklabels(y_labels)
-        plt.show()
+# Add Process
+def add_process():
+    try:
+        pid = len(process_list) + 1
+        arrival = int(arrival_entry.get())
+        burst = int(burst_entry.get())
+        process_list.append({'id': pid, 'arrival': arrival, 'burst': burst})
+        process_display.insert("", "end", values=(pid, arrival, burst))
+    except ValueError:
+        messagebox.showerror("Error", "Invalid input! Enter integers.")
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = CPUScheduler(root)
-    root.mainloop()
+# GUI Setup
+root = tk.Tk()
+root.title("⚡ Energy-Efficient CPU Scheduling Simulator")
+root.geometry("650x600")
+root.configure(bg="#eef2f3")
+
+# Styles
+style = ttk.Style()
+style.theme_use("clam")
+style.configure("TLabel", background="#eef2f3", font=("Segoe UI", 10))
+style.configure("TButton", font=("Segoe UI", 10, "bold"), background="#4CAF50", foreground="white")
+style.map("TButton", background=[("active", "#45a049")])
+style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"), background="#1976D2", foreground="white")
+style.configure("Treeview", font=("Segoe UI", 10), rowheight=25)
+
+tk.Label(root, text="CPU Scheduling Simulator", font=("Segoe UI", 16, "bold"), fg="#1976D2", bg="#eef2f3").pack(pady=10)
+tk.Label(root, text="Select Scheduling Algorithm:", font=("Segoe UI", 10, "bold")).pack()
+algo_var = tk.StringVar(value="FCFS")
+algo_dropdown = ttk.Combobox(root, textvariable=algo_var, values=["FCFS", "SJF", "Round Robin"], state="readonly", width=20)
+algo_dropdown.pack(pady=5)
+
+frame = tk.Frame(root, bg="#eef2f3")
+frame.pack(pady=10)
+
+tk.Label(frame, text="Arrival Time:", font=("Segoe UI", 10, "bold")).grid(row=0, column=0, padx=5, pady=5)
+arrival_entry = tk.Entry(frame, width=10)
+arrival_entry.grid(row=0, column=1, padx=5)
+
+tk.Label(frame, text="Burst Time:", font=("Segoe UI", 10, "bold")).grid(row=1, column=0, padx=5, pady=5)
+burst_entry = tk.Entry(frame, width=10)
+burst_entry.grid(row=1, column=1, padx=5)
+
+tk.Button(frame, text="Add Process", command=add_process).grid(row=2, column=0, columnspan=2, pady=10)
+
+tk.Label(root, text="Time Quantum (for RR):", font=("Segoe UI", 10, "bold")).pack(pady=5)
+quantum_entry = tk.Entry(root, width=10)
+quantum_entry.pack()
+
+tk.Label(root, text="Process List", font=("Segoe UI", 11, "bold"), fg="#1976D2", bg="#eef2f3").pack()
+
+process_display = ttk.Treeview(root, columns=("ID", "Arrival", "Burst"), show="headings", height=6)
+process_display.heading("ID", text="PID")
+process_display.heading("Arrival", text="Arrival Time")
+process_display.heading("Burst", text="Burst Time")
+process_display.column("ID", width=50, anchor='center')
+process_display.column("Arrival", width=100, anchor='center')
+process_display.column("Burst", width=100, anchor='center')
+process_display.pack(pady=10)
+
+tk.Button(root, text="Run Simulation", command=run_scheduling).pack(pady=15)
+
+process_list = []
+root.mainloop()
 
