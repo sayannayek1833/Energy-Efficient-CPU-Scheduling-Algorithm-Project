@@ -49,7 +49,7 @@ def energy_efficient_sjf(processes):
         current = min(available_processes, key=lambda x: x['burst'])  # Select shortest job
         processes.remove(current)
 
-        # DVFS Simulation
+        # DVFS Simulation.........
         cpu_frequency = 1.5 if current['burst'] > 5 else 2.5  # Reduce frequency for long tasks
 
         current['completion'] = time + current['burst']
@@ -68,7 +68,7 @@ def energy_efficient_sjf(processes):
     return completed
 
 
-# Energy-Efficient Round Robin Scheduling
+# Energy-Efficient Round Robin Scheduling......
 def energy_efficient_round_robin(processes, quantum):
     queue = deque()
     time = 0
