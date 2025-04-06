@@ -7,7 +7,7 @@ def energy_efficient_fcfs(processes):
         if time < process['arrival']:  
             time = process['arrival']  # If CPU is idle, move to process arrival time
 
-        # **Dynamic Voltage and Frequency Scaling (DVFS) Simulation**
+        # Dynamic Voltage and Frequency Scaling (DVFS) Simulation
         if process['burst'] > 5:
             cpu_frequency = 1.5  # Reduce frequency for long tasks (Save Energy)
         else:
